@@ -27,6 +27,6 @@ This project is still under construction. We're still optimizing the model on th
 ## Reference
 [1]: [VQA: Visual Question Answering](http://visualqa.org/)
 
-[2]:Yang, Zichao, et al. "Stacked attention networks for image question answering." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2016.
+[2]: Yang, Zichao, et al. "Stacked attention networks for image question answering." Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. 2016.
 
 [3]: Graves, Alex, Greg Wayne, and Ivo Danihelka. "Neural turing machines." arXiv preprint arXiv:1410.5401 (2014).

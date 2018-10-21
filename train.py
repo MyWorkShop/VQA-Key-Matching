@@ -19,7 +19,7 @@ def get_model(
     answer,
     phase_train,
     ):
-    output = model(
+    output, mi_loss = model(
         image,
         question,
         data.fixed_num + 1,
@@ -29,9 +29,9 @@ def get_model(
         tf.get_variable_scope(),
         )
     one_hot_label = tf.one_hot(answer, data.fixed_num + 1)
-    cross_entropy = \
-        tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=one_hot_label,
-                       logits=output))
+    cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+    # cross_entropy = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                            labels=one_hot_label, logits=output)) + mi_loss
     correct_prediction = tf.equal(tf.argmax(output, 1), answer)
     correct_prediction = tf.cast(correct_prediction, tf.float32)
     return (cross_entropy, correct_prediction)
@@ -88,14 +88,15 @@ with tf.device('/cpu:0'):
     is_training = tf.placeholder(tf.bool, name='train')
 
     lr = 1e-3
-    step_rate = 1000
-    decay = 0.97
+    step_rate = 3000
+    decay = 0.3
 
     global_step = tf.Variable(0, trainable=False)
     increment_global_step = tf.assign(global_step, global_step + 1)
     learning_rate = tf.train.exponential_decay(lr, global_step, step_rate, decay, staircase=True)
 
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=0.01)
+    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+    
 
     (loss, accuracy) = make_parallel(NUM_GPU, images, questions,
             answers, is_training)
@@ -135,4 +136,4 @@ with tf.Session() as sess:
                 answers: answers_batches,
                 is_training: False,
                 })
-            print str(a * 100) + ',' + str(l)
+            print str(i/100) + ',' + str(a * 100) + ',' + str(l)
