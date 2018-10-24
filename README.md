@@ -1,5 +1,7 @@
 # VQA-Key-Matching
 
+For more information, please check the documents in folder `Doc`.
+
 ## What is Visual Question Answering?
 
 VQA is a new dataset containing open-ended questions about images. These questions require an understanding of vision, language and commonsense knowledge to answer.[1]
@@ -18,7 +20,7 @@ We use VQA v2 dataset and you can download it [here](http://visualqa.org/downloa
 
 The annotations file, the images file and the questions file are required separately to be put into `Annotations`, `Images` and `Questions` floder.
 
-Your are reconmanded to run `tr_read.py` to load the image file in the datasets to a `.tfrecord` file. The you can just run `train.py` to train the model.
+Your are reconmanded to run `tr_write.py` to load the image file in the datasets to a `.tfrecord` file. The you can just run `train.py` to train the model.
 
 ## Why there is no test code?
 
