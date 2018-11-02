@@ -44,6 +44,7 @@ def deconv(
     name='deconv',
     ):
     with tf.name_scope(name):
+        x = unpool(x)
         layer1 = tf.layers.conv2d_transpose(
             x,
             num,
@@ -52,6 +53,7 @@ def deconv(
             activation=tf.nn.relu,
             name='1',
             )
+        # layer1 = tf.layers.dropout(layer1, training=phase_train)
         pool1 = unpool(layer1)
         layer2 = tf.layers.conv2d_transpose(
             pool1,
@@ -61,6 +63,7 @@ def deconv(
             activation=tf.nn.relu,
             name='2',
             )
+        # layer2 = tf.layers.dropout(layer2, training=phase_train)
         pool2 = unpool(layer2)
         layer3 = tf.layers.conv2d_transpose(
             pool2,
@@ -70,6 +73,7 @@ def deconv(
             activation=tf.nn.relu,
             name='3',
             )
+        # layer3 = tf.layers.dropout(layer3, training=phase_train)
         pool3 = unpool(layer3)
         layer4 = tf.layers.conv2d_transpose(
             pool3,
@@ -79,6 +83,7 @@ def deconv(
             activation=tf.nn.relu,
             name='4',
             )
+        # layer4 = tf.layers.dropout(layer4, training=phase_train)
         pool4 = unpool(layer4)
         layer5 = tf.layers.conv2d_transpose(
             pool4,
@@ -131,8 +136,7 @@ def mlp_output(
     with tf.variable_scope(name):
         layer1 = tf.layers.dense(x, num1, activation=tf.nn.relu,
                                  name='1')
-        layer1 = tf.layers.batch_normalization(layer1, -1,
-                training=phase_train)
+        # layer1 = tf.layers.dropout(layer1, training=phase_train)
         layer2 = tf.layers.dense(layer1, num2, name='2')
         return layer2
 
@@ -148,12 +152,12 @@ def mlp2(
     with tf.variable_scope(name):
         layer1 = tf.layers.dense(x, num1, activation=tf.nn.relu,
                                  name='1')
-        layer1 = tf.layers.batch_normalization(layer1, -1,
-                training=phase_train)
+        # layer1 = tf.layers.batch_normalization(layer1, -1,
+        #         training=phase_train)
         layer2 = tf.layers.dense(layer1, num2, activation=tf.nn.relu,
                                  name='2')
-        layer2 = tf.layers.batch_normalization(layer2, -1,
-                training=phase_train)
+        # layer2 = tf.layers.batch_normalization(layer2, -1,
+        #         training=phase_train)
         return layer2
 
 
@@ -169,16 +173,16 @@ def mlp3(
     with tf.variable_scope(name):
         layer1 = tf.layers.dense(x, num1, activation=tf.nn.relu,
                                  name='1')
-        layer1 = tf.layers.batch_normalization(layer1, -1,
-                training=phase_train)
+        # layer1 = tf.layers.batch_normalization(layer1, -1,
+        #         training=phase_train)
         layer2 = tf.layers.dense(layer1, num2, activation=tf.nn.relu,
                                  name='2')
-        layer2 = tf.layers.batch_normalization(layer2, -1,
-                training=phase_train)
+        # layer2 = tf.layers.batch_normalization(layer2, -1,
+        #         training=phase_train)
         layer3 = tf.layers.dense(layer2, num3, activation=tf.nn.relu,
                                  name='3')
-        layer3 = tf.layers.batch_normalization(layer3, -1,
-                training=phase_train)
+        # layer3 = tf.layers.batch_normalization(layer3, -1,
+        #         training=phase_train)
         return layer3
 
 
@@ -220,7 +224,7 @@ def conv_block(
                 training=phase_train)
 
         block1 = res_block(layer0, num, phase_train, '1')
-        block2 = res_block(layer0, num, phase_train, '2')
+        block2 = res_block(block1, num, phase_train, '2')
         block2 = act(block2)
         if with_pool:
             pool = max_pool(block2)
@@ -242,11 +246,12 @@ def conv(
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
         layer1 = max_pool(tf.nn.relu(layer1))
-        layer2 = conv_block(layer1, num, phase_train, True, '2')
-        layer3 = conv_block(layer2, num * 2, phase_train, True, '3')
-        layer4 = conv_block(layer3, num * 4, phase_train, True, '4')
+        layer2 = conv_block(layer1, num , phase_train, True, '2')
+        layer3 = conv_block(layer2, num, phase_train, True, '3')
+        layer4 = conv_block(layer3, num * 2, phase_train, True, '4')
+        layer5 = conv_block(layer4, num * 8, phase_train, False, '5')
 
-        return layer4
+        return layer5
 
 
 def embedding(
@@ -355,58 +360,55 @@ def model(
 
         image_feature = conv(images, 64, phase_train)
         image_index = image_feature
+        image_feature_1 = tf.reduce_mean(image_index, [1, 2])
 
         # Processing Questions
 
         question_embedded = embedding(questions, vocabulary_size,
                 embedding_size)
-        question_feature = encoding_conv(question_embedded, 64 * 4,
+        question_conv = encoding_conv(question_embedded, 64 * 8,
                 phase_train)
 
         with tf.device('/cpu:0'):
             question_bow = tf.contrib.layers.bow_encoder(questions,
-                    vocabulary_size, embedding_size, scope='bow')
+                    vocabulary_size, 64 * 8, scope='bow')
+
+        question_feature = tf.concat([question_bow, question_conv], -1)
+
         question_key = mlp3(
-            question_bow,
+            question_feature,
             1024,
             1024,
-            64 * 4,
+            64 * 8,
             phase_train,
             'mlp_key',
             )
 
         # Attention Using Key Matching
 
+        alpha = tf.Variable(1.0, name = 'alpha')
+        beta = tf.Variable(1.0, name = 'beta')
         question_key_expanded = \
-            tf.expand_dims(tf.expand_dims(question_key, 1), 1)
+            tf.expand_dims(tf.expand_dims(question_key + beta * image_feature_1, 1), 1)
         similarity = cosine_similarity(image_index,
                 question_key_expanded)
-        similarity = tf.layers.conv2d(
-            similarity,
-            64,
-            [3, 3],
-            padding='same',
-            activation=tf.nn.relu,
-            name='conv_similarity_1',
-            )
-        similarity = tf.layers.conv2d(similarity, 1, [3, 3],
-                padding='same', name='conv_similarity_2')
-        hotmap = tf.nn.sigmoid(similarity)
+        hotmap = softmax(alpha * similarity, [1, 2])
 
-        # hotmap = softmax(similarity, [1, 2])
+        hotmap = softmax(similarity, [1, 2])
 
-        image_feature1d = tf.reduce_mean(image_feature * hotmap, [1, 2])
+        image_feature_2 = tf.reduce_mean(image_feature * hotmap, [1, 2])
 
         # Compact Bilinear Pooling
 
-        with tf.device('/cpu:0'):
-            feature = compact_bilinear_pooling_layer(image_feature1d,
-                    question_feature, 4096)
+        # with tf.device('/cpu:0'):
+        #     feature = compact_bilinear_pooling_layer(image_feature_concated,
+        #             question_feature, 4096)
+        feature = tf.concat([image_feature_2, question_feature], -1)
         output = mlp_output(feature, 2048, num_output, phase_train,
                             'output')
 
         # autoencoder
 
-        rebulid_image = deconv(image_feature, 32, phase_train)
-        mi_loss = tf.reduce_mean(tf.square(rebulid_image - images))
+        rebulid_image = deconv(max_pool(image_index), 32, phase_train)
+        mi_loss = tf.reduce_sum(tf.reduce_mean(tf.square(rebulid_image - images), 0))
         return (output, mi_loss)

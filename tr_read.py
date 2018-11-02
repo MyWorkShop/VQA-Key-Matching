@@ -196,6 +196,7 @@ class data_vqa:
                     + char_to_replace + ' ')
         stemming = ' '
         splited = replacing.split()
+        # return replacing
         return stemming.join([stem(item) for item in splited])
 
     def tokenization(self, stentance, preprocess=True):

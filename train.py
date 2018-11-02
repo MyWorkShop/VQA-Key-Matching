@@ -6,7 +6,7 @@ from model import model, embedding
 import tensorflow as tf
 import numpy as np
 
-# Config of the data
+# Config
 
 RESIZE_SIZE = 256
 BATCH_SIZE = 128
@@ -35,6 +35,7 @@ def get_model(
             tf.nn.softmax_cross_entropy_with_logits_v2(
                     labels=one_hot_label,
                        logits=output))  
+
     correct_prediction = tf.equal(tf.argmax(output, 1), answer)
     correct_prediction = tf.cast(correct_prediction, tf.float32)
     return (cross_entropy, mi_loss, correct_prediction)
@@ -92,7 +93,7 @@ with tf.device('/cpu:0'):
 
     lr = 1e-3
     step_rate = 3000
-    decay = 0.3
+    decay = 0.9
 
     global_step = tf.Variable(0, trainable=False)
     increment_global_step = tf.assign(global_step, global_step + 1)
@@ -106,7 +107,7 @@ with tf.device('/cpu:0'):
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
-        train_step = optimizer.minimize(loss + mi_loss,
+        train_step = optimizer.minimize(loss,
                 colocate_gradients_with_ops=True)
         pretrain_step = optimizer.minimize(mi_loss,
                 colocate_gradients_with_ops=True)
@@ -125,8 +126,8 @@ with tf.Session() as sess:
         sess.run([images_op, questions_op, answers_op])
     print('[pretrain]')
     for i in range(1000):
-        (_, _, images_batches, questions_batches, answers_batches, ml) = \
-            sess.run([pretrain_step, increment_global_step, images_op,
+        (_, images_batches, questions_batches, answers_batches, ml) = \
+            sess.run([pretrain_step, images_op,
                      questions_op, answers_op, mi_loss], feed_dict={
             images: images_batches,
             questions: questions_batches,
@@ -145,14 +146,19 @@ with tf.Session() as sess:
             answers: answers_batches,
             is_training: True,
             })
-        if i % 100 == 0 and i != 0:
-
-            (a, l, images_batches, questions_batches,
-             answers_batches) = sess.run([accuracy, loss, images_op,
-                    questions_op, answers_op], feed_dict={
-                images: images_batches,
-                questions: questions_batches,
-                answers: answers_batches,
-                is_training: False,
-                })
-            print(str(i / 100) + ',' + str(a * 100) + ',' + str(l))
+        if i % 10 == 0 and i != 0:
+            if i % 100 == 0:
+                a_ = 0.0
+                l_ = 0.0
+                for j in range(5):
+                    (a, l, images_batches, questions_batches,
+                    answers_batches) = sess.run([accuracy, loss, images_op,
+                            questions_op, answers_op], feed_dict={
+                        images: images_batches,
+                        questions: questions_batches,
+                        answers: answers_batches,
+                        is_training: False,
+                        })
+                    a_ += a
+                    l_ += l
+                print(str(i / 100) + ',' + str(a_ * 20) + ',' + str(l_ / 5))
