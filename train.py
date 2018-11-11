@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
 from tr_read import data
 from model import model, embedding
 import tensorflow as tf
@@ -11,6 +12,8 @@ import numpy as np
 RESIZE_SIZE = 256
 BATCH_SIZE = 128
 NUM_GPU = 4
+
+path_to_save = "./model_pre_train.ckpt"
 
 
 def get_model(
@@ -25,7 +28,7 @@ def get_model(
         question,
         data.fixed_num + 1,
         data.fixed_num + 1,
-        128,
+        256,
         phase_train,
         tf.get_variable_scope(),
         )
@@ -92,7 +95,7 @@ with tf.device('/cpu:0'):
     is_training = tf.placeholder(tf.bool, name='train')
 
     lr = 1e-3
-    step_rate = 3000
+    step_rate = 5000
     decay = 0.9
 
     global_step = tf.Variable(0, trainable=False)
@@ -111,8 +114,13 @@ with tf.device('/cpu:0'):
                 colocate_gradients_with_ops=True)
         pretrain_step = optimizer.minimize(mi_loss,
                 colocate_gradients_with_ops=True)
+    for var in tf.trainable_variables():
+        print(var)
+    pre_train_saver = tf.train.Saver(tf.trainable_variables('conv') +\
+                        tf.trainable_variables('encoding_conv') +\
+                        tf.trainable_variables('embedding'))
 
-# for x in tf.global_variables():
+# for x in tf.trainable_variables():
 #     print x.name
 
 with tf.Session() as sess:
@@ -124,20 +132,25 @@ with tf.Session() as sess:
     threads = tf.train.start_queue_runners(coord=coord)
     (images_batches, questions_batches, answers_batches) = \
         sess.run([images_op, questions_op, answers_op])
-    print('[pretrain]')
-    for i in range(1000):
-        (_, images_batches, questions_batches, answers_batches, ml) = \
-            sess.run([pretrain_step, images_op,
-                     questions_op, answers_op, mi_loss], feed_dict={
-            images: images_batches,
-            questions: questions_batches,
-            answers: answers_batches,
-            is_training: True,
-            })
-        if i % 10 == 0 and i != 0:
-            print(str(i / 10) + ',' + str(ml))
+    if os.path.isfile(path_to_save + '.index'):
+        print('[loading pretrained model]')
+        pre_train_saver.restore(sess, path_to_save)
+    else:
+        print('[pretrain]')
+        for i in range(10000):
+            (_, images_batches, questions_batches, answers_batches, ml) = \
+                sess.run([pretrain_step, images_op,
+                        questions_op, answers_op, mi_loss], feed_dict={
+                images: images_batches,
+                questions: questions_batches,
+                answers: answers_batches,
+                is_training: True,
+                })
+            if i % 10 == 0 and i != 0:
+                print(str(i / 10) + ',' + str(ml))
+        save_path = pre_train_saver.save(sess, path_to_save)
     print('[train]')
-    for i in range(100000):
+    for i in range(200000):
         (_, _, images_batches, questions_batches, answers_batches) = \
             sess.run([train_step, increment_global_step, images_op,
                      questions_op, answers_op], feed_dict={
