@@ -36,6 +36,46 @@ def unpool(x):
                          sh[3]]))
         return ret
 
+def hw_conv2d_transpose(x, num, fliter_size, padding = 'same', activation = None, name = 'hw_conv2d_transpose'):
+    with tf.variable_scope(name):
+        x = tf.layers.conv2d_transpose(
+            x,
+            num,
+            [1, fliter_size[1]],
+            padding=padding,
+            activation=activation,
+            name='h',
+            )
+        x = tf.layers.conv2d_transpose(
+            x,
+            num,
+            [fliter_size[0], 1],
+            padding=padding,
+            activation=activation,
+            name='w',
+            )
+        return x
+
+def hw_separable_conv2d(x, num, fliter_size, padding = 'same', activation = None, name = 'hw_separable_conv2d'):
+    with tf.variable_scope(name):
+        x = tf.layers.separable_conv2d(
+            x,
+            num,
+            [1, fliter_size[1]],
+            padding=padding,
+            activation=activation,
+            name='h',
+            )
+        x = tf.layers.separable_conv2d(
+            x,
+            num,
+            [fliter_size[0], 1],
+            padding=padding,
+            activation=activation,
+            name='w',
+            )
+        return x
+
 
 def deconv(
     x,
@@ -44,36 +84,7 @@ def deconv(
     name='deconv',
     ):
     with tf.variable_scope(name):
-        
-        # x = unpool(x)
-        # layer1 = tf.layers.conv2d(
-        #     x,
-        #     num,
-        #     [3, 3],
-        #     padding='same',
-        #     activation=tf.nn.relu,
-        #     name='1',
-        #     )
-        # pool1 = max_pool(layer1)
-        # layer2 = tf.layers.conv2d(
-        #     pool1,
-        #     num,
-        #     [3, 3],
-        #     padding='same',
-        #     activation=tf.nn.relu,
-        #     name='2',
-        #     )
-        # pool2 = max_pool(layer2)
-        # layer3 = tf.layers.conv2d_transpose(
-        #     x,
-        #     num,
-        #     [3, 3],
-        #     padding='same',
-        #     activation=tf.nn.relu,
-        #     name='3',
-        #     )
-        # pool3 = unpool(layer3)
-        layer4 = tf.layers.conv2d_transpose(
+        layer4 = hw_conv2d_transpose(
             x,
             num,
             [3, 3],
@@ -82,7 +93,7 @@ def deconv(
             name='4',
             )
         pool4 = unpool(layer4)
-        layer5 = tf.layers.conv2d_transpose(
+        layer5 = hw_conv2d_transpose(
             pool4,
             num,
             [3, 3],
@@ -91,7 +102,7 @@ def deconv(
             name='5',
             )
         pool5 = unpool(layer5)
-        layer6 = tf.layers.conv2d_transpose(
+        layer6 = hw_conv2d_transpose(
             pool5,
             num,
             [3, 3],
@@ -100,7 +111,7 @@ def deconv(
             name='6',
             )
         pool6 = unpool(layer6)
-        layer7 = tf.layers.conv2d_transpose(
+        layer7 = hw_conv2d_transpose(
             pool6,
             num,
             [3, 3],
@@ -109,7 +120,7 @@ def deconv(
             name='7',
             )
         pool7 = unpool(layer7)
-        layer8 = tf.layers.conv2d_transpose(
+        layer8 = hw_conv2d_transpose(
             pool7,
             num,
             [3, 3],
@@ -118,7 +129,7 @@ def deconv(
             name='8',
             )
         pool8 = unpool(layer8)
-        layer9 = tf.layers.conv2d_transpose(
+        layer9 = hw_conv2d_transpose(
             pool8,
             3,
             [3, 3],
@@ -228,13 +239,13 @@ def res_block(
     ):
 
     with tf.variable_scope(name):
-        layer1 = tf.layers.separable_conv2d(tf.nn.relu(x), num, [3, 3],
+        layer1 = hw_separable_conv2d(tf.nn.relu(x), num, [3, 3],
                                   padding='same', name='1')
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
         layer1 = tf.nn.relu(layer1)
 
-        layer2 = tf.layers.separable_conv2d(layer1, num, [3, 3], padding='same',
+        layer2 = hw_separable_conv2d(layer1, num, [3, 3], padding='same',
                                   name='2')
         layer2 = tf.layers.batch_normalization(layer2, -1,
                 training=phase_train)
@@ -276,7 +287,7 @@ def conv(
     ):
 
     with tf.variable_scope(name):
-        layer1 = tf.layers.separable_conv2d(x, num, [7, 7], strides = (2, 2), padding='same',
+        layer1 = tf.layers.separable_conv2d(x, num, [7, 7], strides = [2, 2], padding='same',
                                   name='1')
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
@@ -286,7 +297,6 @@ def conv(
         layer4 = conv_block(layer3, num * 4, phase_train, False, '4')
         layer5 = conv_block(layer4, num * 4, phase_train, True, '5')
         layer6 = conv_block(layer5, num * 8, phase_train, False, '6')
-
         return layer6
 
 
