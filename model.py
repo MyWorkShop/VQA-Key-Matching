@@ -15,8 +15,8 @@ def no_act(x):
 
 def max_pool(value, name='maxpool'):
     with tf.variable_scope(name) as scope:
-        return tf.layers.max_pooling2d(value, [3, 3], [2, 2], padding = 'same',
-                name=scope)
+        return tf.layers.max_pooling2d(value, [3, 3], [2, 2],
+                padding='same', name=scope)
 
 
 def unpool(x):
@@ -36,7 +36,15 @@ def unpool(x):
                          sh[3]]))
         return ret
 
-def hw_conv2d_transpose(x, num, fliter_size, padding = 'same', activation = None, name = 'hw_conv2d_transpose'):
+
+def hw_conv2d_transpose(
+    x,
+    num,
+    fliter_size,
+    padding='same',
+    activation=None,
+    name='hw_conv2d_transpose',
+    ):
     with tf.variable_scope(name):
         x = tf.layers.conv2d_transpose(
             x,
@@ -56,7 +64,15 @@ def hw_conv2d_transpose(x, num, fliter_size, padding = 'same', activation = None
             )
         return x
 
-def hw_separable_conv2d(x, num, fliter_size, padding = 'same', activation = None, name = 'hw_separable_conv2d'):
+
+def hw_separable_conv2d(
+    x,
+    num,
+    fliter_size,
+    padding='same',
+    activation=None,
+    name='hw_separable_conv2d',
+    ):
     with tf.variable_scope(name):
         x = tf.layers.separable_conv2d(
             x,
@@ -83,6 +99,7 @@ def deconv(
     phase_train,
     name='deconv',
     ):
+
     with tf.variable_scope(name):
         layer4 = hw_conv2d_transpose(
             x,
@@ -197,12 +214,16 @@ def mlp2(
     with tf.variable_scope(name):
         layer1 = tf.layers.dense(x, num1, activation=tf.nn.relu,
                                  name='1')
+
         # layer1 = tf.layers.batch_normalization(layer1, -1,
         #         training=phase_train)
+
         layer2 = tf.layers.dense(layer1, num2, activation=tf.nn.relu,
                                  name='2')
+
         # layer2 = tf.layers.batch_normalization(layer2, -1,
         #         training=phase_train)
+
         return layer2
 
 
@@ -218,16 +239,22 @@ def mlp3(
     with tf.variable_scope(name):
         layer1 = tf.layers.dense(x, num1, activation=tf.nn.relu,
                                  name='1')
+
         # layer1 = tf.layers.batch_normalization(layer1, -1,
         #         training=phase_train)
+
         layer2 = tf.layers.dense(layer1, num2, activation=tf.nn.relu,
                                  name='2')
+
         # layer2 = tf.layers.batch_normalization(layer2, -1,
         #         training=phase_train)
+
         layer3 = tf.layers.dense(layer2, num3, activation=tf.nn.relu,
                                  name='3')
+
         # layer3 = tf.layers.batch_normalization(layer3, -1,
         #         training=phase_train)
+
         return layer3
 
 
@@ -240,13 +267,13 @@ def res_block(
 
     with tf.variable_scope(name):
         layer1 = hw_separable_conv2d(tf.nn.relu(x), num, [3, 3],
-                                  padding='same', name='1')
+                padding='same', name='1')
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
         layer1 = tf.nn.relu(layer1)
 
-        layer2 = hw_separable_conv2d(layer1, num, [3, 3], padding='same',
-                                  name='2')
+        layer2 = hw_separable_conv2d(layer1, num, [3, 3], padding='same'
+                , name='2')
         layer2 = tf.layers.batch_normalization(layer2, -1,
                 training=phase_train)
         layer2 = x + layer2
@@ -287,12 +314,18 @@ def conv(
     ):
 
     with tf.variable_scope(name):
-        layer1 = tf.layers.separable_conv2d(x, num, [7, 7], strides = [2, 2], padding='same',
-                                  name='1')
+        layer1 = tf.layers.separable_conv2d(
+            x,
+            num,
+            [7, 7],
+            strides=[2, 2],
+            padding='same',
+            name='1',
+            )
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
         layer1 = max_pool(tf.nn.relu(layer1))
-        layer2 = conv_block(layer1, num , phase_train, True, '2')
+        layer2 = conv_block(layer1, num, phase_train, True, '2')
         layer3 = conv_block(layer2, num * 2, phase_train, True, '3')
         layer4 = conv_block(layer3, num * 4, phase_train, False, '4')
         layer5 = conv_block(layer4, num * 4, phase_train, True, '5')
@@ -313,21 +346,33 @@ def embedding(
                 embedding_size], -1.0, 1.0))
         embed = tf.nn.embedding_lookup(embeddings, inputs)
         bow = tf.reduce_sum(embed, 1)
-        return embed, bow
+        return (embed, bow)
 
 
 def multi_seq_conv(inputs, num_filters, name='multiseqconv'):
     with tf.variable_scope(name):
-        return tf.concat([tf.layers.conv1d(inputs, num_filters, i, activation=tf.nn.relu,
-                         padding='same', name='%d' % i) for i in [1, 2,
-                         3, 4]], -1)
+        return tf.concat([tf.layers.conv1d(
+            inputs,
+            num_filters,
+            i,
+            activation=tf.nn.relu,
+            padding='same',
+            name='%d' % i,
+            ) for i in [1, 2, 3, 4]], -1)
 
-def multi_seq_conv_transpose(inputs, num_filters, name='multiseqdeconv'):
+
+def multi_seq_conv_transpose(inputs, num_filters, name='multiseqdeconv'
+                             ):
     with tf.variable_scope(name):
         inputs = tf.expand_dims(inputs, 1)
-        return tf.squeeze(tf.concat([tf.layers.conv2d_transpose(inputs, num_filters, [1, i],
-                         activation=tf.nn.relu, padding='same', name='%d' % i) for i in [1, 2,
-                         3, 4]], -1), 1)
+        return tf.squeeze(tf.concat([tf.layers.conv2d_transpose(
+            inputs,
+            num_filters,
+            [1, i],
+            activation=tf.nn.relu,
+            padding='same',
+            name='%d' % i,
+            ) for i in [1, 2, 3, 4]], -1), 1)
 
 
 def rnn(
@@ -381,7 +426,7 @@ def encoding_conv(
         layer4 = tf.layers.dense(layer3_reduce, num_filters,
                                  activation=tf.nn.relu, name='4')
 
-        return layer4, layer3
+        return (layer4, layer3)
 
 
 def decoding_conv(
@@ -392,16 +437,16 @@ def decoding_conv(
     ):
 
     with tf.variable_scope(name):
-        layer1 = multi_seq_conv_transpose(inputs, num_filters=num_filters,
-                                name='conv1')
+        layer1 = multi_seq_conv_transpose(inputs,
+                num_filters=num_filters, name='conv1')
         layer1 = tf.layers.batch_normalization(layer1, -1,
                 training=phase_train)
-        layer2 = multi_seq_conv_transpose(layer1, num_filters=num_filters,
-                                name='conv2')
+        layer2 = multi_seq_conv_transpose(layer1,
+                num_filters=num_filters, name='conv2')
         layer2 = tf.layers.batch_normalization(layer2, -1,
                 training=phase_train)
-        layer3 = multi_seq_conv_transpose(layer2, num_filters=num_filters,
-                                name='conv3')
+        layer3 = multi_seq_conv_transpose(layer2,
+                num_filters=num_filters, name='conv3')
         layer3 = tf.layers.batch_normalization(layer3, -1,
                 training=phase_train)
 
@@ -417,8 +462,8 @@ def encoding_rnn(
 
     with tf.variable_scope(name):
         layer1 = rnn(inputs, phase_train, num_hidden=num_filters)
-        layer2 = tf.layers.dense(layer1, 64 * 8,
-                                 activation=tf.nn.relu, name='2')
+        layer2 = tf.layers.dense(layer1, 64 * 8, activation=tf.nn.relu,
+                                 name='2')
         return layer2
 
 
@@ -430,8 +475,8 @@ def model(
     embedding_size,
     phase_train,
     name='model',
-    ):    
-    
+    ):
+
     with tf.variable_scope(name):
 
         # Processing Images
@@ -442,10 +487,10 @@ def model(
 
         # Processing Questions
 
-        question_embedded, question_bow = embedding(questions, vocabulary_size,
-                embedding_size)
-        question_conv, question_conv_origional = encoding_conv(question_embedded, 64 * 8,
-                phase_train)
+        (question_embedded, question_bow) = embedding(questions,
+                vocabulary_size, embedding_size)
+        (question_conv, question_conv_origional) = \
+            encoding_conv(question_embedded, 64 * 8, phase_train)
 
         # with tf.device('/cpu:0'):
         #     question_bow = tf.contrib.layers.bow_encoder(questions,
@@ -464,8 +509,8 @@ def model(
 
         # Attention Using Key Matching
 
-        alpha = tf.Variable(1.0, name = 'alpha')
-        beta = tf.Variable(1.0, name = 'beta')
+        alpha = tf.Variable(1.0, name='alpha')
+        beta = tf.Variable(1.0, name='beta')
         question_key_expanded = \
             tf.expand_dims(tf.expand_dims(question_key, 1), 1)
         similarity = cosine_similarity(image_index,
@@ -481,6 +526,7 @@ def model(
         # with tf.device('/cpu:0'):
         #     feature = compact_bilinear_pooling_layer(image_feature_concated,
         #             question_feature, 4096)
+
         feature = tf.concat([image_feature_2, question_feature], -1)
         output = mlp_output(feature, 2048, num_output, phase_train,
                             'output')
@@ -488,8 +534,12 @@ def model(
         # autoencoder
 
         rebulid_image = deconv(image_index, 32, phase_train)
-        rebulid_question = decoding_conv(question_conv_origional, 64 * 8, phase_train)
-        mi_loss = tf.reduce_sum(tf.square(rebulid_image - images))\
-                        + tf.reduce_sum(tf.square(rebulid_question - question_embedded))
+        rebulid_question = decoding_conv(question_conv_origional, 64
+                * 8, phase_train)
+        mi_loss = tf.reduce_sum(tf.square(rebulid_image - images)) \
+            + tf.reduce_sum(tf.square(rebulid_question
+                            - question_embedded))
+
         # mi_loss = 0.
+
         return (output, mi_loss)

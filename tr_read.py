@@ -74,7 +74,8 @@ class data_vqa:
             self.copy_data()
             del self.data
             del self.data_ids
-            self.question_processed = self.process_question(self.questions,
+            self.question_processed = self.process_question(\
+                    self.questions,
                     self.max_len_question)
             del self.questions
             self.build_dict_question()
@@ -133,7 +134,8 @@ class data_vqa:
         print self.max_len_question
 
     def build_dict_question(self):
-        """ Build the mapping from image's imgid to index of image's questions index """
+        """ Build the mapping from image's imgid to index of 
+            image's questions index """
 
         print '    [build_dict_question]'
         self.imgid_dict = {}

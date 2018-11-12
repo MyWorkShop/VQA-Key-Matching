@@ -13,7 +13,7 @@ RESIZE_SIZE = 256
 BATCH_SIZE = 128
 NUM_GPU = 4
 
-path_to_save = "./model_pre_train.ckpt"
+path_to_save = './model_pre_train.ckpt'
 
 
 def get_model(
@@ -34,10 +34,9 @@ def get_model(
         )
     one_hot_label = tf.one_hot(answer, data.fixed_num + 1)
     cross_entropy = \
-        tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits_v2(
-                    labels=one_hot_label,
-                       logits=output))  
+        tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(\
+                       labels=one_hot_label,
+                       logits=output))
 
     correct_prediction = tf.equal(tf.argmax(output, 1), answer)
     correct_prediction = tf.cast(correct_prediction, tf.float32)
@@ -105,8 +104,8 @@ with tf.device('/cpu:0'):
 
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-    (loss, mi_loss, accuracy) = make_parallel(NUM_GPU, images, questions,
-            answers, is_training)
+    (loss, mi_loss, accuracy) = make_parallel(NUM_GPU, images,
+            questions, answers, is_training)
 
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
@@ -115,10 +114,10 @@ with tf.device('/cpu:0'):
         pretrain_step = optimizer.minimize(mi_loss,
                 colocate_gradients_with_ops=True)
     for var in tf.trainable_variables():
-        print(var)
-    pre_train_saver = tf.train.Saver(tf.trainable_variables('conv') +\
-                        tf.trainable_variables('encoding_conv') +\
-                        tf.trainable_variables('embedding'))
+        print var
+    pre_train_saver = tf.train.Saver(tf.trainable_variables('conv')
+            + tf.trainable_variables('encoding_conv')
+            + tf.trainable_variables('embedding'))
 
 # for x in tf.trainable_variables():
 #     print x.name
@@ -133,23 +132,23 @@ with tf.Session() as sess:
     (images_batches, questions_batches, answers_batches) = \
         sess.run([images_op, questions_op, answers_op])
     if os.path.isfile(path_to_save + '.index'):
-        print('[loading pretrained model]')
+        print '[loading pretrained model]'
         pre_train_saver.restore(sess, path_to_save)
     else:
-        print('[pretrain]')
+        print '[pretrain]'
         for i in range(10000):
-            (_, images_batches, questions_batches, answers_batches, ml) = \
-                sess.run([pretrain_step, images_op,
-                        questions_op, answers_op, mi_loss], feed_dict={
+            (_, images_batches, questions_batches, answers_batches,
+             ml) = sess.run([pretrain_step, images_op, questions_op,
+                            answers_op, mi_loss], feed_dict={
                 images: images_batches,
                 questions: questions_batches,
                 answers: answers_batches,
                 is_training: True,
                 })
             if i % 10 == 0 and i != 0:
-                print(str(i / 10) + ',' + str(ml))
+                print str(i / 10) + ',' + str(ml)
         save_path = pre_train_saver.save(sess, path_to_save)
-    print('[train]')
+    print '[train]'
     for i in range(200000):
         (_, _, images_batches, questions_batches, answers_batches) = \
             sess.run([train_step, increment_global_step, images_op,
@@ -164,9 +163,11 @@ with tf.Session() as sess:
                 a_ = 0.0
                 l_ = 0.0
                 for j in range(5):
+
                     (a, l, images_batches, questions_batches,
-                    answers_batches) = sess.run([accuracy, loss, images_op,
-                            questions_op, answers_op], feed_dict={
+                     answers_batches) = sess.run([accuracy, loss,
+                            images_op, questions_op, answers_op],
+                            feed_dict={
                         images: images_batches,
                         questions: questions_batches,
                         answers: answers_batches,
@@ -174,4 +175,5 @@ with tf.Session() as sess:
                         })
                     a_ += a
                     l_ += l
-                print(str(i / 100) + ',' + str(a_ * 20) + ',' + str(l_ / 5))
+                print str(i / 100) + ',' + str(a_ * 20) + ',' + str(l_
+                        / 5)
